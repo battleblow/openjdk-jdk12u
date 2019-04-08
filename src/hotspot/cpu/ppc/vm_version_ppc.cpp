@@ -37,7 +37,9 @@
 #include "utilities/globalDefinitions.hpp"
 #include "vm_version_ppc.hpp"
 
+#ifndef _ALLBSD_SOURCE
 #include <sys/sysinfo.h>
+#endif
 
 #if defined(LINUX) && defined(VM_LITTLE_ENDIAN)
 #include <sys/auxv.h>
