@@ -2560,7 +2560,7 @@ public:
   // RBIT only allows T8B and T16B but encodes them oddly.  Argh...
   void rbit(FloatRegister Vd, SIMD_Arrangement T, FloatRegister Vn) {
     assert((ASSERTION), MSG);
-    _rbit(Vd, SIMD_Arrangement(T & 1 | 0b010), Vn);
+    _rbit(Vd, SIMD_Arrangement((T & 1) | 0b010), Vn);
   }
 #undef ASSERTION
 
