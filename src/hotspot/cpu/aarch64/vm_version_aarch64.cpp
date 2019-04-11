@@ -35,10 +35,21 @@
 #include OS_HEADER_INLINE(os)
 
 #ifndef BUILTIN_SIM
+#if defined (__linux__)
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
+#endif
 #else
 #define getauxval(hwcap) 0
+#endif
+
+#if defined (__FreeBSD__)
+#include <machine/armreg.h>
+#include "freebsd_aarch64.hpp"
+#endif
+
+#ifndef HWCAP_ASIMD
+#define HWCAP_ASIMD (1 << 1)
 #endif
 
 #ifndef HWCAP_AES
@@ -164,6 +175,7 @@ void VM_Version::get_processor_features() {
     SoftwarePrefetchHintDistance &= ~7;
   }
 
+#if defined(__linux__)
   unsigned long auxv = getauxval(AT_HWCAP);
 
   char buf[512];
@@ -191,6 +203,51 @@ void VM_Version::get_processor_features() {
     }
     fclose(f);
   }
+#elif defined(__FreeBSD__)
+struct cpu_desc cpu_desc[1];
+struct cpu_desc user_cpu_desc;
+char buf[512];
+int cpu_lines = 0;
+
+uint32_t midr;
+uint32_t impl_id;
+uint32_t part_id;
+uint32_t cpu = 0;
+size_t i;
+const struct cpu_parts *cpu_partsp = NULL;
+
+midr = READ_SPECIALREG(midr_el1);
+
+impl_id = CPU_IMPL(midr);
+for (i = 0; i < nitems(cpu_implementers); i++) {
+        if (impl_id == cpu_implementers[i].impl_id ||
+            cpu_implementers[i].impl_id == 0) {
+                cpu_desc[cpu].cpu_impl = impl_id;
+                cpu_desc[cpu].cpu_impl_name = cpu_implementers[i].impl_name;
+                cpu_partsp = cpu_implementers[i].cpu_parts;
+                break;
+        }
+}
+
+part_id = CPU_PART(midr);
+for (i = 0; &cpu_partsp[i] != NULL; i++) {
+        if (part_id == cpu_partsp[i].part_id ||
+            cpu_partsp[i].part_id == 0) {
+                cpu_desc[cpu].cpu_part_num = part_id;
+                cpu_desc[cpu].cpu_part_name = cpu_partsp[i].part_name;
+                break;
+        }
+}
+
+cpu_desc[cpu].cpu_revision = CPU_REV(midr);
+cpu_desc[cpu].cpu_variant = CPU_VAR(midr);
+
+_cpu = cpu_desc[cpu].cpu_impl;
+_variant = cpu_desc[cpu].cpu_variant;
+_model = cpu_desc[cpu].cpu_part_num;
+_revision = cpu_desc[cpu].cpu_revision;
+
+#endif
 
   // Enable vendor specific features
 
@@ -245,6 +302,39 @@ void VM_Version::get_processor_features() {
   if (_cpu == CPU_ARM && cpu_lines == 1 && _model == 0xd07) _features |= CPU_A53MAC;
 
   sprintf(buf, "0x%02x:0x%x:0x%03x:%d", _cpu, _variant, _model, _revision);
+#if defined (__FreeBSD__)
+  unsigned long auxv = 0;
+  uint64_t id_aa64isar0, id_aa64pfr0;
+
+  id_aa64isar0 = READ_SPECIALREG(ID_AA64ISAR0_EL1);
+  id_aa64pfr0 = READ_SPECIALREG(ID_AA64PFR0_EL1);
+
+  if (ID_AA64ISAR0_AES(id_aa64isar0) == ID_AA64ISAR0_AES_BASE) {
+    auxv = auxv | HWCAP_AES;
+  }
+
+  if (ID_AA64ISAR0_AES(id_aa64isar0) == ID_AA64ISAR0_AES_PMULL) {
+    auxv = auxv | HWCAP_PMULL;
+  }
+
+  if (ID_AA64ISAR0_SHA1(id_aa64isar0) == ID_AA64ISAR0_SHA1_BASE) {
+    auxv = auxv | HWCAP_SHA1;
+  }
+
+  if (ID_AA64ISAR0_SHA2(id_aa64isar0) == ID_AA64ISAR0_SHA2_BASE) {
+    auxv = auxv | HWCAP_SHA2;
+  }
+
+  if (ID_AA64ISAR0_CRC32(id_aa64isar0) == ID_AA64ISAR0_CRC32_BASE) {
+    auxv = auxv | HWCAP_CRC32;
+  }
+
+  if (ID_AA64PFR0_ADV_SIMD(id_aa64pfr0) == ID_AA64PFR0_ADV_SIMD_IMPL || \
+      ID_AA64PFR0_ADV_SIMD(id_aa64pfr0) == ID_AA64PFR0_ADV_SIMD_HP ) {
+    auxv = auxv | HWCAP_ASIMD;
+  }
+#endif
+
   if (_model2) sprintf(buf+strlen(buf), "(0x%03x)", _model2);
   if (auxv & HWCAP_ASIMD) strcat(buf, ", simd");
   if (auxv & HWCAP_CRC32) strcat(buf, ", crc");
