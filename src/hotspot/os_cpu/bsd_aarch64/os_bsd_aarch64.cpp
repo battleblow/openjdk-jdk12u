@@ -77,7 +77,6 @@
 # include <pwd.h>
 # include <poll.h>
 # include <ucontext.h>
-# include <fpu_control.h>
 
 #ifdef BUILTIN_SIM
 #define REG_SP REG_RSP
@@ -94,7 +93,12 @@
 #endif
 
 address os::current_stack_pointer() {
+#if defined(__clang__) || defined(__llvm__)
+  register void *esp;
+  __asm__ ("mov %0, " SPELL_REG_SP :"=r"(esp):);
+#else
   register void *esp __asm__ (SPELL_REG_SP);
+#endif
   return (address) esp;
 }
 
@@ -110,7 +114,7 @@ address os::Bsd::ucontext_get_pc(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (address)uc->uc_mcontext.gregs[REG_PC];
 #else
-  return (address)uc->uc_mcontext.pc;
+  return (address)uc->uc_mcontext.mc_gpregs.gp_elr;
 #endif
 }
 
@@ -118,7 +122,7 @@ void os::Bsd::ucontext_set_pc(ucontext_t * uc, address pc) {
 #ifdef BUILTIN_SIM
   uc->uc_mcontext.gregs[REG_PC] = (intptr_t)pc;
 #else
-  uc->uc_mcontext.pc = (intptr_t)pc;
+  uc->uc_mcontext.mc_gpregs.gp_elr = (intptr_t)pc;
 #endif
 }
 
@@ -126,7 +130,7 @@ intptr_t* os::Bsd::ucontext_get_sp(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (intptr_t*)uc->uc_mcontext.gregs[REG_SP];
 #else
-  return (intptr_t*)uc->uc_mcontext.sp;
+  return (intptr_t*)uc->uc_mcontext.mc_gpregs.gp_sp;
 #endif
 }
 
@@ -134,7 +138,7 @@ intptr_t* os::Bsd::ucontext_get_fp(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (intptr_t*)uc->uc_mcontext.gregs[REG_FP];
 #else
-  return (intptr_t*)uc->uc_mcontext.regs[REG_FP];
+  return (intptr_t*)uc->uc_mcontext.mc_gpregs.gp_x[REG_FP];
 #endif
 }
 
@@ -206,7 +210,7 @@ bool os::Bsd::get_frame_at_stack_banging_point(JavaThread* thread, ucontext_t* u
       // belong to the caller.
       intptr_t* fp = os::Bsd::ucontext_get_fp(uc);
       intptr_t* sp = os::Bsd::ucontext_get_sp(uc);
-      address pc = (address)(uc->uc_mcontext.regs[REG_LR]
+      address pc = (address)(uc->uc_mcontext.mc_gpregs.gp_lr
                          - NativeInstruction::instruction_size);
       *fr = frame(sp, fp, pc);
       if (!fr->is_java_frame()) {
@@ -231,7 +235,12 @@ frame os::get_sender_for_C_frame(frame* fr) {
 }
 
 intptr_t* _get_previous_fp() {
+#if defined(__clang__) || defined(__llvm__)
+  register intptr_t **fp;
+  __asm__("mov %0, " SPELL_REG_FP :"=r"(fp));
+#else
   register intptr_t **fp __asm__ (SPELL_REG_FP);
+#endif
 
   // fp is for this frame (_get_previous_fp). We want the fp for the
   // caller of os::current_frame*(), so go up two frames. However, for
@@ -343,11 +352,11 @@ JVM_handle_bsd_signal(int sig,
 
 #ifdef BUILTIN_SIM
     if (pc == (address) Fetch32PFI) {
-       uc->uc_mcontext.gregs[REG_PC] = intptr_t(Fetch32Resume) ;
+       uc->uc_mcontext.mc_gpregs.gp_elr = intptr_t(Fetch32Resume) ;
        return 1 ;
     }
     if (pc == (address) FetchNPFI) {
-       uc->uc_mcontext.gregs[REG_PC] = intptr_t (FetchNResume) ;
+       uc->uc_mcontext.mc_gpregs.gp_elr = intptr_t (FetchNResume) ;
        return 1 ;
     }
 #else
@@ -408,21 +417,6 @@ JVM_handle_bsd_signal(int sig,
           // it as a hint.
           tty->print_raw_cr("Please check if any of your loaded .so files has "
                             "enabled executable stack (see man page execstack(8))");
-        } else {
-          // Accessing stack address below sp may cause SEGV if current
-          // thread has MAP_GROWSDOWN stack. This should only happen when
-          // current thread was created by user code with MAP_GROWSDOWN flag
-          // and then attached to VM. See notes in os_bsd.cpp.
-          if (thread->osthread()->expanding_stack() == 0) {
-             thread->osthread()->set_expanding_stack();
-             if (os::Bsd::manually_expand_stack(thread, addr)) {
-               thread->osthread()->clear_expanding_stack();
-               return 1;
-             }
-             thread->osthread()->clear_expanding_stack();
-          } else {
-             fatal("recursive segv. expanding stack.");
-          }
         }
       }
     }
@@ -520,13 +514,6 @@ JVM_handle_bsd_signal(int sig,
 void os::Bsd::init_thread_fpu_state(void) {
 }
 
-int os::Bsd::get_fpu_control_word(void) {
-  return 0;
-}
-
-void os::Bsd::set_fpu_control_word(int fpu_control) {
-}
-
 // Check that the bsd kernel version is 2.4 or higher since earlier
 // versions do not support SSE without patches.
 bool os::supports_sse() {
@@ -592,7 +579,7 @@ void os::print_context(outputStream *st, const void *context) {
 #else
   for (int r = 0; r < 31; r++) {
     st->print("R%-2d=", r);
-    print_location(st, uc->uc_mcontext.regs[r]);
+    print_location(st, uc->uc_mcontext.mc_gpregs.gp_x[r]);
   }
 #endif
   st->cr();
@@ -643,7 +630,7 @@ void os::print_register_info(outputStream *st, const void *context) {
   st->print("R15="); print_location(st, uc->uc_mcontext.gregs[REG_R15]);
 #else
   for (int r = 0; r < 31; r++)
-    st->print_cr(  "R%d=" INTPTR_FORMAT, r, (uintptr_t)uc->uc_mcontext.regs[r]);
+    st->print_cr(  "R%d=" INTPTR_FORMAT, r, (uintptr_t)uc->uc_mcontext.mc_gpregs.gp_x[r]);
 #endif
   st->cr();
 }
@@ -667,42 +654,42 @@ extern "C" {
     return 0;
   }
 
-  void _Copy_conjoint_jshorts_atomic(jshort* from, jshort* to, size_t count) {
+  void _Copy_conjoint_jshorts_atomic(const jshort* from, jshort* to, size_t count) {
     if (from > to) {
-      jshort *end = from + count;
+      const jshort *end = from + count;
       while (from < end)
         *(to++) = *(from++);
     }
     else if (from < to) {
-      jshort *end = from;
+      const jshort *end = from;
       from += count - 1;
       to   += count - 1;
       while (from >= end)
         *(to--) = *(from--);
     }
   }
-  void _Copy_conjoint_jints_atomic(jint* from, jint* to, size_t count) {
+  void _Copy_conjoint_jints_atomic(const jint* from, jint* to, size_t count) {
     if (from > to) {
-      jint *end = from + count;
+      const jint *end = from + count;
       while (from < end)
         *(to++) = *(from++);
     }
     else if (from < to) {
-      jint *end = from;
+      const jint *end = from;
       from += count - 1;
       to   += count - 1;
       while (from >= end)
         *(to--) = *(from--);
     }
   }
-  void _Copy_conjoint_jlongs_atomic(jlong* from, jlong* to, size_t count) {
+  void _Copy_conjoint_jlongs_atomic(const jlong* from, jlong* to, size_t count) {
     if (from > to) {
-      jlong *end = from + count;
+      const jlong *end = from + count;
       while (from < end)
         os::atomic_copy64(from++, to++);
     }
     else if (from < to) {
-      jlong *end = from;
+      const jlong *end = from;
       from += count - 1;
       to   += count - 1;
       while (from >= end)
@@ -710,22 +697,22 @@ extern "C" {
     }
   }
 
-  void _Copy_arrayof_conjoint_bytes(HeapWord* from,
+  void _Copy_arrayof_conjoint_bytes(const HeapWord* from,
                                     HeapWord* to,
                                     size_t    count) {
     memmove(to, from, count);
   }
-  void _Copy_arrayof_conjoint_jshorts(HeapWord* from,
+  void _Copy_arrayof_conjoint_jshorts(const HeapWord* from,
                                       HeapWord* to,
                                       size_t    count) {
     memmove(to, from, count * 2);
   }
-  void _Copy_arrayof_conjoint_jints(HeapWord* from,
+  void _Copy_arrayof_conjoint_jints(const HeapWord* from,
                                     HeapWord* to,
                                     size_t    count) {
     memmove(to, from, count * 4);
   }
-  void _Copy_arrayof_conjoint_jlongs(HeapWord* from,
+  void _Copy_arrayof_conjoint_jlongs(const HeapWord* from,
                                      HeapWord* to,
                                      size_t    count) {
     memmove(to, from, count * 8);
