@@ -38,6 +38,10 @@
 #include "sun_jvm_hotspot_debugger_amd64_AMD64ThreadContext.h"
 #endif
 
+#ifdef aarch64
+#include "sun_jvm_hotspot_debugger_aarch64_AARCH64ThreadContext.h"
+#endif
+
 #if defined(sparc) || defined(sparcv9)
 #include "sun_jvm_hotspot_debugger_sparc_SPARCThreadContext.h"
 #endif
@@ -301,6 +305,9 @@ JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_bsd_BsdDebuggerLocal_
 #ifdef amd64
 #define NPRGREG sun_jvm_hotspot_debugger_amd64_AMD64ThreadContext_NPRGREG
 #endif
+#ifdef aarch64
+#define NPRGREG sun_jvm_hotspot_debugger_aarch64_AARCH64ThreadContext_NPRGREG
+#endif
 #if defined(sparc) || defined(sparcv9)
 #define NPRGREG sun_jvm_hotspot_debugger_sparc_SPARCThreadContext_NPRGREG
 #endif
@@ -396,6 +403,18 @@ JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_bsd_BsdDebuggerLocal_
   regs[REG_INDEX(R_O7)]  = gregs.u_regs[14];
 #endif /* sparc */
 
+#if defined(aarch64)
+
+#define REG_INDEX(reg) sun_jvm_hotspot_debugger_aarch64_AARCH64ThreadContext_##reg
+
+  {
+    int i;
+    for (i = 0; i < 31; i++)
+      regs[i] = gregs.x[i];
+    regs[REG_INDEX(SP)] = gregs.sp;
+    regs[REG_INDEX(PC)] = gregs.elr;
+  }
+#endif /* aarch64 */
 
   (*env)->ReleaseLongArrayElements(env, array, regs, JNI_COMMIT);
   return array;
