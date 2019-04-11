@@ -426,7 +426,7 @@ void LIRGenerator::do_ArithmeticOp_FPU(ArithmeticOp* x) {
     tmp = new_register(T_DOUBLE);
   }
 
-  arithmetic_op_fpu(x->op(), reg, left.result(), right.result(), NULL);
+  arithmetic_op_fpu(x->op(), reg, left.result(), right.result(), false);
 
   set_result(x, round_item(reg));
 }
