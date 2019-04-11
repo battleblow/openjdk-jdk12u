@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef OS_CPU_LINUX_AARCH64_VM_THREAD_LINUX_AARCH64_HPP
-#define OS_CPU_LINUX_AARCH64_VM_THREAD_LINUX_AARCH64_HPP
+#ifndef OS_CPU_BSD_AARCH64_VM_THREAD_BSD_AARCH64_HPP
+#define OS_CPU_BSD_AARCH64_VM_THREAD_BSD_AARCH64_HPP
 
  private:
 #ifdef ASSERT
@@ -77,4 +77,4 @@ public:
   static void enable_register_stack_guard() {}
   static void disable_register_stack_guard() {}
 
-#endif // OS_CPU_LINUX_AARCH64_VM_THREAD_LINUX_AARCH64_HPP
+#endif // OS_CPU_BSD_AARCH64_VM_THREAD_BSD_AARCH64_HPP

@@ -65,7 +65,7 @@ bool JavaThread::pd_get_top_frame(frame* fr_addr, void* ucontext, bool isInJava)
 
     intptr_t* ret_fp;
     intptr_t* ret_sp;
-    ExtendedPC addr = os::Linux::fetch_frame_from_ucontext(this, uc,
+    ExtendedPC addr = os::Bsd::fetch_frame_from_ucontext(this, uc,
       &ret_sp, &ret_fp);
     if (addr.pc() == NULL || ret_sp == NULL ) {
       // ucontext wasn't useful

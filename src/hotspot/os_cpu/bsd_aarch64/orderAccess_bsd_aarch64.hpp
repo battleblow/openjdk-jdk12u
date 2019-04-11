@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef OS_CPU_LINUX_AARCH64_VM_ORDERACCESS_LINUX_AARCH64_HPP
-#define OS_CPU_LINUX_AARCH64_VM_ORDERACCESS_LINUX_AARCH64_HPP
+#ifndef OS_CPU_BSD_AARCH64_VM_ORDERACCESS_BSD_AARCH64_HPP
+#define OS_CPU_BSD_AARCH64_VM_ORDERACCESS_BSD_AARCH64_HPP
 
 // Included in orderAccess.hpp header file.
 
@@ -70,4 +70,4 @@ struct OrderAccess::PlatformOrderedStore<byte_size, RELEASE_X_FENCE>
   void operator()(T v, volatile T* p) const { release_store(p, v); fence(); }
 };
 
-#endif // OS_CPU_LINUX_AARCH64_VM_ORDERACCESS_LINUX_AARCH64_HPP
+#endif // OS_CPU_BSD_AARCH64_VM_ORDERACCESS_BSD_AARCH64_HPP

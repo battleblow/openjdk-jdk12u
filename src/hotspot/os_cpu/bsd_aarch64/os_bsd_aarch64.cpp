@@ -35,7 +35,7 @@
 #include "code/nativeInst.hpp"
 #include "interpreter/interpreter.hpp"
 #include "memory/allocation.inline.hpp"
-#include "os_share_linux.hpp"
+#include "os_share_bsd.hpp"
 #include "prims/jniFastGetField.hpp"
 #include "prims/jvm_misc.hpp"
 #include "runtime/arguments.hpp"
@@ -106,7 +106,7 @@ char* os::non_memory_address_word() {
   return (char*) 0xffffffffffff;
 }
 
-address os::Linux::ucontext_get_pc(const ucontext_t * uc) {
+address os::Bsd::ucontext_get_pc(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (address)uc->uc_mcontext.gregs[REG_PC];
 #else
@@ -114,7 +114,7 @@ address os::Linux::ucontext_get_pc(const ucontext_t * uc) {
 #endif
 }
 
-void os::Linux::ucontext_set_pc(ucontext_t * uc, address pc) {
+void os::Bsd::ucontext_set_pc(ucontext_t * uc, address pc) {
 #ifdef BUILTIN_SIM
   uc->uc_mcontext.gregs[REG_PC] = (intptr_t)pc;
 #else
@@ -122,7 +122,7 @@ void os::Linux::ucontext_set_pc(ucontext_t * uc, address pc) {
 #endif
 }
 
-intptr_t* os::Linux::ucontext_get_sp(const ucontext_t * uc) {
+intptr_t* os::Bsd::ucontext_get_sp(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (intptr_t*)uc->uc_mcontext.gregs[REG_SP];
 #else
@@ -130,7 +130,7 @@ intptr_t* os::Linux::ucontext_get_sp(const ucontext_t * uc) {
 #endif
 }
 
-intptr_t* os::Linux::ucontext_get_fp(const ucontext_t * uc) {
+intptr_t* os::Bsd::ucontext_get_fp(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (intptr_t*)uc->uc_mcontext.gregs[REG_FP];
 #else
@@ -141,9 +141,9 @@ intptr_t* os::Linux::ucontext_get_fp(const ucontext_t * uc) {
 // For Forte Analyzer AsyncGetCallTrace profiling support - thread
 // is currently interrupted by SIGPROF.
 // os::Solaris::fetch_frame_from_ucontext() tries to skip nested signal
-// frames. Currently we don't do that on Linux, so it's the same as
+// frames. Currently we don't do that on Bsd, so it's the same as
 // os::fetch_frame_from_context().
-ExtendedPC os::Linux::fetch_frame_from_ucontext(Thread* thread,
+ExtendedPC os::Bsd::fetch_frame_from_ucontext(Thread* thread,
   const ucontext_t* uc, intptr_t** ret_sp, intptr_t** ret_fp) {
 
   assert(thread != NULL, "just checking");
@@ -160,9 +160,9 @@ ExtendedPC os::fetch_frame_from_context(const void* ucVoid,
   const ucontext_t* uc = (const ucontext_t*)ucVoid;
 
   if (uc != NULL) {
-    epc = ExtendedPC(os::Linux::ucontext_get_pc(uc));
-    if (ret_sp) *ret_sp = os::Linux::ucontext_get_sp(uc);
-    if (ret_fp) *ret_fp = os::Linux::ucontext_get_fp(uc);
+    epc = ExtendedPC(os::Bsd::ucontext_get_pc(uc));
+    if (ret_sp) *ret_sp = os::Bsd::ucontext_get_sp(uc);
+    if (ret_fp) *ret_fp = os::Bsd::ucontext_get_fp(uc);
   } else {
     // construct empty ExtendedPC for return value checking
     epc = ExtendedPC(NULL);
@@ -180,8 +180,8 @@ frame os::fetch_frame_from_context(const void* ucVoid) {
   return frame(sp, fp, epc.pc());
 }
 
-bool os::Linux::get_frame_at_stack_banging_point(JavaThread* thread, ucontext_t* uc, frame* fr) {
-  address pc = (address) os::Linux::ucontext_get_pc(uc);
+bool os::Bsd::get_frame_at_stack_banging_point(JavaThread* thread, ucontext_t* uc, frame* fr) {
+  address pc = (address) os::Bsd::ucontext_get_pc(uc);
   if (Interpreter::contains(pc)) {
     // interpreter performs stack banging after the fixed frame header has
     // been generated while the compilers perform it before. To maintain
@@ -204,8 +204,8 @@ bool os::Linux::get_frame_at_stack_banging_point(JavaThread* thread, ucontext_t*
       // In compiled code, the stack banging is performed before LR
       // has been saved in the frame.  LR is live, and SP and FP
       // belong to the caller.
-      intptr_t* fp = os::Linux::ucontext_get_fp(uc);
-      intptr_t* sp = os::Linux::ucontext_get_sp(uc);
+      intptr_t* fp = os::Bsd::ucontext_get_fp(uc);
+      intptr_t* sp = os::Bsd::ucontext_get_sp(uc);
       address pc = (address)(uc->uc_mcontext.regs[REG_LR]
                          - NativeInstruction::instruction_size);
       *fr = frame(sp, fp, pc);
@@ -273,7 +273,7 @@ extern "C" void FetchNResume () ;
 #endif
 
 extern "C" JNIEXPORT int
-JVM_handle_linux_signal(int sig,
+JVM_handle_bsd_signal(int sig,
                         siginfo_t* info,
                         void* ucVoid,
                         int abort_if_unrecognized) {
@@ -290,13 +290,13 @@ JVM_handle_linux_signal(int sig,
   // Note: it's not uncommon that JNI code uses signal/sigset to install
   // then restore certain signal handler (e.g. to temporarily block SIGPIPE,
   // or have a SIGILL handler when detecting CPU type). When that happens,
-  // JVM_handle_linux_signal() might be invoked with junk info/ucVoid. To
+  // JVM_handle_bsd_signal() might be invoked with junk info/ucVoid. To
   // avoid unnecessary crash when libjsig is not preloaded, try handle signals
   // that do not require siginfo/ucontext first.
 
   if (sig == SIGPIPE || sig == SIGXFSZ) {
     // allow chained handler to go first
-    if (os::Linux::chained_handler(sig, info, ucVoid)) {
+    if (os::Bsd::chained_handler(sig, info, ucVoid)) {
       return true;
     } else {
       // Ignoring SIGPIPE/SIGXFSZ - see bugs 4229104 or 6499219
@@ -313,7 +313,7 @@ JVM_handle_linux_signal(int sig,
 
   JavaThread* thread = NULL;
   VMThread* vmthread = NULL;
-  if (os::Linux::signal_handlers_are_installed) {
+  if (os::Bsd::signal_handlers_are_installed) {
     if (t != NULL ){
       if(t->is_Java_thread()) {
         thread = (JavaThread*)t;
@@ -324,7 +324,7 @@ JVM_handle_linux_signal(int sig,
     }
   }
 /*
-  NOTE: does not seem to work on linux.
+  NOTE: does not seem to work on bsd.
   if (info == NULL || info->si_code <= 0 || info->si_code == SI_NOINFO) {
     // can't decode this kind of signal
     info = NULL;
@@ -339,7 +339,7 @@ JVM_handle_linux_signal(int sig,
 
   //%note os_trap_1
   if (info != NULL && uc != NULL && thread != NULL) {
-    pc = (address) os::Linux::ucontext_get_pc(uc);
+    pc = (address) os::Bsd::ucontext_get_pc(uc);
 
 #ifdef BUILTIN_SIM
     if (pc == (address) Fetch32PFI) {
@@ -352,7 +352,7 @@ JVM_handle_linux_signal(int sig,
     }
 #else
     if (StubRoutines::is_safefetch_fault(pc)) {
-      os::Linux::ucontext_set_pc(uc, StubRoutines::continuation_for_safefetch_fault(pc));
+      os::Bsd::ucontext_set_pc(uc, StubRoutines::continuation_for_safefetch_fault(pc));
       return 1;
     }
 #endif
@@ -373,7 +373,7 @@ JVM_handle_linux_signal(int sig,
           if (thread->thread_state() == _thread_in_Java) {
             if (thread->in_stack_reserved_zone(addr)) {
               frame fr;
-              if (os::Linux::get_frame_at_stack_banging_point(thread, uc, &fr)) {
+              if (os::Bsd::get_frame_at_stack_banging_point(thread, uc, &fr)) {
                 assert(fr.is_java_frame(), "Must be a Java frame");
                 frame activation =
                   SharedRuntime::look_for_reserved_stack_annotated_method(thread, fr);
@@ -412,10 +412,10 @@ JVM_handle_linux_signal(int sig,
           // Accessing stack address below sp may cause SEGV if current
           // thread has MAP_GROWSDOWN stack. This should only happen when
           // current thread was created by user code with MAP_GROWSDOWN flag
-          // and then attached to VM. See notes in os_linux.cpp.
+          // and then attached to VM. See notes in os_bsd.cpp.
           if (thread->osthread()->expanding_stack() == 0) {
              thread->osthread()->set_expanding_stack();
-             if (os::Linux::manually_expand_stack(thread, addr)) {
+             if (os::Bsd::manually_expand_stack(thread, addr)) {
                thread->osthread()->clear_expanding_stack();
                return 1;
              }
@@ -487,12 +487,12 @@ JVM_handle_linux_signal(int sig,
     // save all thread context in case we need to restore it
     if (thread != NULL) thread->set_saved_exception_pc(pc);
 
-    os::Linux::ucontext_set_pc(uc, stub);
+    os::Bsd::ucontext_set_pc(uc, stub);
     return true;
   }
 
   // signal-chaining
-  if (os::Linux::chained_handler(sig, info, ucVoid)) {
+  if (os::Bsd::chained_handler(sig, info, ucVoid)) {
      return true;
   }
 
@@ -502,7 +502,7 @@ JVM_handle_linux_signal(int sig,
   }
 
   if (pc == NULL && uc != NULL) {
-    pc = os::Linux::ucontext_get_pc(uc);
+    pc = os::Bsd::ucontext_get_pc(uc);
   }
 
   // unmask current signal
@@ -517,17 +517,17 @@ JVM_handle_linux_signal(int sig,
   return true; // Mute compiler
 }
 
-void os::Linux::init_thread_fpu_state(void) {
+void os::Bsd::init_thread_fpu_state(void) {
 }
 
-int os::Linux::get_fpu_control_word(void) {
+int os::Bsd::get_fpu_control_word(void) {
   return 0;
 }
 
-void os::Linux::set_fpu_control_word(int fpu_control) {
+void os::Bsd::set_fpu_control_word(int fpu_control) {
 }
 
-// Check that the linux kernel version is 2.4 or higher since earlier
+// Check that the bsd kernel version is 2.4 or higher since earlier
 // versions do not support SSE without patches.
 bool os::supports_sse() {
   return true;
@@ -597,7 +597,7 @@ void os::print_context(outputStream *st, const void *context) {
 #endif
   st->cr();
 
-  intptr_t *sp = (intptr_t *)os::Linux::ucontext_get_sp(uc);
+  intptr_t *sp = (intptr_t *)os::Bsd::ucontext_get_sp(uc);
   st->print_cr("Top of Stack: (sp=" PTR_FORMAT ")", p2i(sp));
   print_hex_dump(st, (address)sp, (address)(sp + 8*sizeof(intptr_t)), sizeof(intptr_t));
   st->cr();
@@ -605,7 +605,7 @@ void os::print_context(outputStream *st, const void *context) {
   // Note: it may be unsafe to inspect memory near pc. For example, pc may
   // point to garbage if entry point in an nmethod is corrupted. Leave
   // this at the end, and hope for the best.
-  address pc = os::Linux::ucontext_get_pc(uc);
+  address pc = os::Bsd::ucontext_get_pc(uc);
   st->print_cr("Instructions: (pc=" PTR_FORMAT ")", p2i(pc));
   print_hex_dump(st, pc - 32, pc + 32, sizeof(char));
 }

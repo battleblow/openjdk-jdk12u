@@ -23,16 +23,16 @@
  *
  */
 
-package sun.jvm.hotspot.debugger.linux.aarch64;
+package sun.jvm.hotspot.debugger.bsd.aarch64;
 
 import sun.jvm.hotspot.debugger.*;
 import sun.jvm.hotspot.debugger.aarch64.*;
-import sun.jvm.hotspot.debugger.linux.*;
+import sun.jvm.hotspot.debugger.bsd.*;
 import sun.jvm.hotspot.debugger.cdbg.*;
 import sun.jvm.hotspot.debugger.cdbg.basic.*;
 
-final public class LinuxAARCH64CFrame extends BasicCFrame {
-   public LinuxAARCH64CFrame(LinuxDebugger dbg, Address fp, Address pc) {
+final public class BsdAARCH64CFrame extends BasicCFrame {
+   public BsdAARCH64CFrame(BsdDebugger dbg, Address fp, Address pc) {
       super(dbg.getCDebugger());
       this.fp = fp;
       this.pc = pc;
@@ -74,7 +74,7 @@ final public class LinuxAARCH64CFrame extends BasicCFrame {
       if (nextPC == null) {
         return null;
       }
-      return new LinuxAARCH64CFrame(dbg, nextFP, nextPC);
+      return new BsdAARCH64CFrame(dbg, nextFP, nextPC);
    }
 
    // package/class internals only
@@ -82,5 +82,5 @@ final public class LinuxAARCH64CFrame extends BasicCFrame {
    private Address pc;
    private Address sp;
    private Address fp;
-   private LinuxDebugger dbg;
+   private BsdDebugger dbg;
 }

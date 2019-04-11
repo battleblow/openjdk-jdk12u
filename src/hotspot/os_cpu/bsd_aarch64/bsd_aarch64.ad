@@ -23,7 +23,7 @@
 //
 //
 
-// AArch64 Linux Architecture Description File
+// AArch64 Bsd Architecture Description File
 
 //----------OS-DEPENDENT ENCODING BLOCK----------------------------------------
 // This block specifies the encoding classes used by the compiler to

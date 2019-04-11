@@ -23,16 +23,16 @@
  *
  */
 
-package sun.jvm.hotspot.debugger.linux.aarch64;
+package sun.jvm.hotspot.debugger.bsd.aarch64;
 
 import sun.jvm.hotspot.debugger.*;
 import sun.jvm.hotspot.debugger.aarch64.*;
-import sun.jvm.hotspot.debugger.linux.*;
+import sun.jvm.hotspot.debugger.bsd.*;
 
-public class LinuxAARCH64ThreadContext extends AARCH64ThreadContext {
-  private LinuxDebugger debugger;
+public class BsdAARCH64ThreadContext extends AARCH64ThreadContext {
+  private BsdDebugger debugger;
 
-  public LinuxAARCH64ThreadContext(LinuxDebugger debugger) {
+  public BsdAARCH64ThreadContext(BsdDebugger debugger) {
     super();
     this.debugger = debugger;
   }
