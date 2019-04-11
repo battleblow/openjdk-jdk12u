@@ -1070,8 +1070,8 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
       // Assembler::EQ does not permit unordered branches, so we add
       // another branch here.  Likewise, Assembler::NE does not permit
       // ordered branches.
-      if (is_unordered && op->cond() == lir_cond_equal
-          || !is_unordered && op->cond() == lir_cond_notEqual)
+      if ((is_unordered && op->cond() == lir_cond_equal)
+          || (!is_unordered && op->cond() == lir_cond_notEqual))
         __ br(Assembler::VS, *(op->ublock()->label()));
       switch(op->cond()) {
       case lir_cond_equal:        acond = Assembler::EQ; break;
