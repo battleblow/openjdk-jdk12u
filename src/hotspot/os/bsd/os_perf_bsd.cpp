@@ -26,19 +26,20 @@
 #include "memory/resourceArea.hpp"
 #include "runtime/os.hpp"
 #include "runtime/os_perf.hpp"
-#include "vm_version_ext_x86.hpp"
+
+#include CPU_HEADER(vm_version_ext)
 
 #ifdef __APPLE__
   #import <libproc.h>
-  #include <sys/time.h>
-  #include <sys/sysctl.h>
   #include <mach/mach.h>
   #include <mach/task_info.h>
-  #include <sys/socket.h>
-  #include <net/if.h>
-  #include <net/if_dl.h>
-  #include <net/route.h>
 #endif
+#include <sys/time.h>
+#include <sys/sysctl.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <net/if_dl.h>
+#include <net/route.h>
 
 static const double NANOS_PER_SEC = 1000000000.0;
 
@@ -341,8 +342,9 @@ int SystemProcessInterface::SystemProcesses::system_processes(SystemProcess** sy
   *system_processes = next;
 
   return OS_OK;
-#endif
+#else
   return FUNCTIONALITY_NOT_IMPLEMENTED;
+#endif
 }
 
 int SystemProcessInterface::system_processes(SystemProcess** system_procs, int* no_of_sys_processes) const {
@@ -430,6 +432,7 @@ NetworkPerformanceInterface::NetworkPerformance::~NetworkPerformance() {
 }
 
 int NetworkPerformanceInterface::NetworkPerformance::network_utilization(NetworkInterface** network_interfaces) const {
+#ifdef __APPLE__
   size_t len;
   int mib[] = {CTL_NET, PF_ROUTE, /* protocol number */ 0, /* address family */ 0, NET_RT_IFLIST2, /* NET_RT_FLAGS mask*/ 0};
   if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), NULL, &len, NULL, 0) != 0) {
@@ -469,6 +472,9 @@ int NetworkPerformanceInterface::NetworkPerformance::network_utilization(Network
   *network_interfaces = ret;
 
   return OS_OK;
+#else
+  return FUNCTIONALITY_NOT_IMPLEMENTED;
+#endif
 }
 
 NetworkPerformanceInterface::NetworkPerformanceInterface() {

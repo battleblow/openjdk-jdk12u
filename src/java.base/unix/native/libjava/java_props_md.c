@@ -106,7 +106,7 @@ static int ParseLocale(JNIEnv* env, int cat, char ** std_language, char ** std_s
     lc = setlocale(cat, NULL);
 #endif
 
-#ifndef __linux__
+#if !defined(__linux__) && !defined(_BSDONLY_SOURCE)
     if (lc == NULL) {
         return 0;
     }
@@ -405,6 +405,10 @@ GetJavaProperties(JNIEnv *env)
 #else
     sprops.graphics_env = "sun.awt.X11GraphicsEnvironment";
     sprops.awt_toolkit = "sun.awt.X11.XToolkit";
+#endif
+
+#ifdef __OpenBSD__
+    sprops.java_net_preferIPv4Stack = "true";
 #endif
 
 #ifdef SI_ISALIST
