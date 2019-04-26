@@ -47,7 +47,9 @@
 #include "opto/runtime.hpp"
 #endif
 
-#include <alloca.h>
+#ifndef __FreeBSD__
+ #include <alloca.h>
+#endif
 
 #define __ masm->
 
@@ -856,6 +858,8 @@ int SharedRuntime::c_calling_convention(const BasicType *sig_bt,
       // Although AIX runs on big endian CPU, float is in the most
       // significant word of an argument slot.
 #define FLOAT_WORD_OFFSET_IN_SLOT 0
+#elif defined(BSD)
+#define FLOAT_WORD_OFFSET_IN_SLOT 1
 #else
 #error "unknown OS"
 #endif
