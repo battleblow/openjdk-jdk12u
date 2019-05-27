@@ -123,7 +123,7 @@ static char *x11GraphicsConfigClassName = "sun/awt/X11GraphicsConfig";
  */
 
 #define MAXFRAMEBUFFERS 16
-#if defined(__linux__) || defined(MACOSX)
+#if defined(__linux__) || defined(MACOSX) || defined(_ALLBSD_SOURCE)
 typedef struct {
    int   screen_number;
    short x_org;
@@ -442,7 +442,7 @@ getAllConfigs (JNIEnv *env, int screen, AwtScreenDataPtr screenDataPtr) {
                                       RTLD_LAZY | RTLD_GLOBAL);
         }
 
-#ifndef __linux__ /* SOLARIS */
+#ifdef __solaris__ /* SOLARIS */
         if (xrenderLibHandle == NULL) {
             xrenderLibHandle = dlopen("/usr/lib/libXrender.so.1",
                                       RTLD_LAZY | RTLD_GLOBAL);
@@ -586,7 +586,7 @@ getAllConfigs (JNIEnv *env, int screen, AwtScreenDataPtr screenDataPtr) {
 }
 
 #ifndef HEADLESS
-#if defined(__linux__) || defined(MACOSX)
+#if defined(__linux__) || defined(MACOSX) || defined(_ALLBSD_SOURCE)
 static void xinerama_init_linux()
 {
     void* libHandle = NULL;
@@ -636,8 +636,7 @@ static void xinerama_init_linux()
         DTRACE_PRINTLN1("\ncouldn't open shared library: %s\n", dlerror());
     }
 }
-#endif
-#if !defined(__linux__) && !defined(MACOSX) /* Solaris */
+#else /* Solaris */
 static void xinerama_init_solaris()
 {
     void* libHandle = NULL;
@@ -697,11 +696,11 @@ static void xineramaInit(void) {
     }
 
     DTRACE_PRINTLN("Xinerama extension is available");
-#if defined(__linux__) || defined(MACOSX)
+#if defined(__linux__) || defined(MACOSX) || defined(_ALLBSD_SOURCE)
     xinerama_init_linux();
 #else /* Solaris */
     xinerama_init_solaris();
-#endif /* __linux__ || MACOSX */
+#endif /* __linux__ || MACOSX || _ALLBSD_SOURCE */
 }
 #endif /* HEADLESS */
 
@@ -1602,7 +1601,7 @@ Java_sun_awt_X11GraphicsEnvironment_getXineramaCenterPoint(JNIEnv *env,
 {
     jobject point = NULL;
 #ifndef HEADLESS    /* return NULL in HEADLESS, Linux */
-#if !defined(__linux__) && !defined(MACOSX)
+#if !defined(__linux__) && !defined(MACOSX) && !defined(_ALLBSD_SOURCE)
     int x,y;
 
     AWT_LOCK();
@@ -1615,7 +1614,7 @@ Java_sun_awt_X11GraphicsEnvironment_getXineramaCenterPoint(JNIEnv *env,
         DTRACE_PRINTLN("unable to call XineramaSolarisCenterFunc: symbol is null");
     }
     AWT_FLUSH_UNLOCK();
-#endif /* __linux __ || MACOSX */
+#endif /* __linux __ || MACOSX || _ALLBSD_SOURCE */
 #endif /* HEADLESS */
     return point;
 }
