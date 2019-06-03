@@ -1560,7 +1560,12 @@ void os::print_os_info(outputStream* st) {
 }
 
 void os::pd_print_cpu_info(outputStream* st, char* buf, size_t buflen) {
-  // Nothing to do for now.
+  size_t size = buflen;
+  int mib[] = { CTL_HW, HW_MODEL };
+  if (sysctl(mib, 2, buf, &size, NULL, 0) == 0) {
+    st->print("CPU Model: %s", buf);
+    st->cr();
+  }
 }
 
 void os::get_summary_cpu_info(char* buf, size_t buflen) {
