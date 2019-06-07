@@ -331,6 +331,9 @@ endif
 ifeq ($(UNAME_S), Linux)
   NUM_CORES := $(shell cat /proc/cpuinfo  | grep -c processor)
 endif
+ifeq ($(findstring BSD,$(UNAME_S)), BSD)
+  NUM_CORES := $(shell /sbin/sysctl -n hw.ncpu)
+endif
 ifeq ($(UNAME_S), Darwin)
   NUM_CORES := $(shell /usr/sbin/sysctl -n hw.ncpu)
 endif
