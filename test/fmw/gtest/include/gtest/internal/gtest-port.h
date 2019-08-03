@@ -263,7 +263,7 @@
 # define GTEST_OS_HPUX 1
 #elif defined __native_client__
 # define GTEST_OS_NACL 1
-#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 # define GTEST_OS_BSD 1
 #elif defined __QNX__
 # define GTEST_OS_QNX 1
