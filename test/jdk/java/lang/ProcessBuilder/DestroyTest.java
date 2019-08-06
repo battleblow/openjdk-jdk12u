@@ -80,7 +80,7 @@ class UnixTest extends ProcessTest {
         processTrapScript.deleteOnExit();
         FileWriter fstream = new FileWriter(processTrapScript);
         try (BufferedWriter out = new BufferedWriter(fstream)) {
-            out.write("#!/bin/bash\n" +
+            out.write("#!/bin/sh\n" +
                 "echo \\\"ProcessTrap.sh started: trapping SIGTERM/SIGINT\\\"\n" +
                 "trap bashtrap SIGTERM SIGINT\n" +
                 "bashtrap()\n" +
