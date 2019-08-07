@@ -65,6 +65,16 @@ case "$OS" in
     ;;
 esac
 
+# Make sure zip(1) is in PATH
+case "$OS" in
+  FreeBSD | OpenBSD )
+    PATH=${PATH}:/usr/local/bin
+    ;;
+  NetBSD )
+    PATH=${PATH}:/usr/pkg/bin
+    ;;
+esac
+
 echo 1 > 1
 mkdir META-INF
 
