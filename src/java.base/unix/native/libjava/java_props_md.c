@@ -407,7 +407,7 @@ GetJavaProperties(JNIEnv *env)
     sprops.awt_toolkit = "sun.awt.X11.XToolkit";
 #endif
 
-#ifdef __OpenBSD__
+#ifdef _BSDONLY_SOURCE
     sprops.java_net_preferIPv4Stack = "true";
 #endif
 

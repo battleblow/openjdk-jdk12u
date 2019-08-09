@@ -109,7 +109,7 @@ typedef struct {
     char *awt_headless;  /* java.awt.headless setting, if NULL (default) will not be set */
 #endif
 
-#ifdef __OpenBSD__
+#ifdef _BSDONLY_SOURCE
     char *java_net_preferIPv4Stack; /* Needed to default to true OpenBSD. */
 #endif
 
