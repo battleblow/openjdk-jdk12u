@@ -44,6 +44,13 @@ ifeq ($(findstring BSD,$(OSNAME)), BSD)
     ARCH=i586
   endif
 endif
+ifneq ($(findstring BSD,$(OSNAME)),)
+  PLATFORM = bsd
+  ARCH = $(shell uname -m)
+  ifeq ($(ARCH), i386)
+    ARCH=i586
+  endif
+endif
 ifeq ($(OSNAME), Windows_NT)
   # MKS
   PLATFORM=windows
