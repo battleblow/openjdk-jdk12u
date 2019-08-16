@@ -453,12 +453,12 @@ check-jck:
 	fi
 
 all-summary: FRC
-	@if [ -n "`find $(TEST_OUTPUT_DIR) -name status.txt`" ]; then
+	@if [ -n "`find $(TEST_OUTPUT_DIR) -name status.txt`" ]; then \
 	    echo ; echo "Summary of test failures" ; \
 	    cat `find $(TEST_OUTPUT_DIR) -name summary.txt` | \
 		grep -v 'Not run' | grep -v 'Passed' ; \
 	    echo ; \
-	    $(EXIT) 1
+	    $(EXIT) 1 ; \
 	fi
 
 # Cleanup
