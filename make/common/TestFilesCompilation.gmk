@@ -98,7 +98,7 @@ define SetupTestFilesCompilationBody
         CXXFLAGS := $$($1_BASE_CXXFLAGS) $$($1_CFLAGS) $$($1_CFLAGS_$$(name)), \
         LDFLAGS := $$($1_LDFLAGS) $$($1_LDFLAGS_$$(name)), \
         DISABLED_WARNINGS_gcc := format undef unused-function unused-value, \
-        DISABLED_WARNINGS_clang := undef format-nonliteral \
+        DISABLED_WARNINGS_clang := undef format-nonliteral enum-compare-switch \
             missing-field-initializers sometimes-uninitialized, \
         DISABLED_WARNINGS_CXX_solstudio := wvarhidenmem, \
         LIBS := $$($1_LIBS_$$(name)), \
