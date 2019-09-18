@@ -75,8 +75,8 @@
 # include <sys/wait.h>
 # include <pwd.h>
 # include <poll.h>
-# include <ucontext.h>
 #ifdef __FreeBSD__
+# include <ucontext.h>
 # include <sys/sysctl.h>
 # include <sys/procctl.h>
 # ifndef PROC_STACKGAP_STATUS
@@ -93,7 +93,6 @@
 #define REG_FP REG_RBP
 #else
 #define REG_FP 29
-#define REG_LR 30
 #endif
 
 NOINLINE address os::current_stack_pointer() {
@@ -112,32 +111,48 @@ address os::Bsd::ucontext_get_pc(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (address)uc->uc_mcontext.gregs[REG_PC];
 #else
+#if defined(__FreeBSD__)
   return (address)uc->uc_mcontext.mc_gpregs.gp_elr;
+#elif defined(__OpenBSD__)
+  return (address)uc->sc_elr;
 #endif
+#endif /* BUILTIN_SIM */
 }
 
 void os::Bsd::ucontext_set_pc(ucontext_t * uc, address pc) {
 #ifdef BUILTIN_SIM
   uc->uc_mcontext.gregs[REG_PC] = (intptr_t)pc;
 #else
+#if defined(__FreeBSD__)
   uc->uc_mcontext.mc_gpregs.gp_elr = (intptr_t)pc;
+#elif defined(__OpenBSD__)
+  uc->sc_elr = (unsigned long)pc;
 #endif
+#endif /* BUILTIN_SIM */
 }
 
 intptr_t* os::Bsd::ucontext_get_sp(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (intptr_t*)uc->uc_mcontext.gregs[REG_SP];
 #else
+#if defined(__FreeBSD__)
   return (intptr_t*)uc->uc_mcontext.mc_gpregs.gp_sp;
+#elif defined(__OpenBSD__)
+  return (intptr_t*)uc->sc_sp;
 #endif
+#endif /* BUILTIN_SIM */
 }
 
 intptr_t* os::Bsd::ucontext_get_fp(const ucontext_t * uc) {
 #ifdef BUILTIN_SIM
   return (intptr_t*)uc->uc_mcontext.gregs[REG_FP];
 #else
+#if defined(__FreeBSD__)
   return (intptr_t*)uc->uc_mcontext.mc_gpregs.gp_x[REG_FP];
+#elif defined(__OpenBSD__)
+  return (intptr_t*)uc->sc_x[REG_FP];
 #endif
+#endif /* BUILTIN_SIM */
 }
 
 // For Forte Analyzer AsyncGetCallTrace profiling support - thread
@@ -208,8 +223,13 @@ bool os::Bsd::get_frame_at_stack_banging_point(JavaThread* thread, ucontext_t* u
       // belong to the caller.
       intptr_t* fp = os::Bsd::ucontext_get_fp(uc);
       intptr_t* sp = os::Bsd::ucontext_get_sp(uc);
+#if defined(__FreeBSD__)
       address pc = (address)(uc->uc_mcontext.mc_gpregs.gp_lr
                          - NativeInstruction::instruction_size);
+#elif defined(__OpenBSD__)
+      address pc = (address)(uc->sc_lr
+                         - NativeInstruction::instruction_size);
+#endif
       *fr = frame(sp, fp, pc);
       if (!fr->is_java_frame()) {
         assert(fr->safe_for_sender(thread), "Safety check");
@@ -597,7 +617,11 @@ void os::print_context(outputStream *st, const void *context) {
 #else
   for (int r = 0; r < 30; r++) {
     st->print("R%-2d=", r);
+#if defined(__FreeBSD__)
     print_location(st, uc->uc_mcontext.mc_gpregs.gp_x[r]);
+#elif defined(__OpenBSD__)
+    print_location(st, uc->sc_x[r]);
+#endif
   }
 #endif
   st->cr();
@@ -648,8 +672,12 @@ void os::print_register_info(outputStream *st, const void *context) {
   st->print("R15="); print_location(st, uc->uc_mcontext.gregs[REG_R15]);
 #else
   for (int r = 0; r < 30; r++)
+#if defined(__FreeBSD__)
     st->print_cr(  "R%d=" INTPTR_FORMAT, r, (uintptr_t)uc->uc_mcontext.mc_gpregs.gp_x[r]);
+#elif defined(__OpenBSD__)
+    st->print_cr(  "R%d=" INTPTR_FORMAT, r, (uintptr_t)uc->sc_x[r]);
 #endif
+#endif /* BUILTIN_SIM */
   st->cr();
 }
 
