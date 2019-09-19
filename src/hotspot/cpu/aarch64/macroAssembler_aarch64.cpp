@@ -1501,7 +1501,6 @@ void MacroAssembler::movptr(Register r, uintptr_t imm64) {
 #ifndef PRODUCT
   {
     char buffer[64];
-    snprintf(buffer, sizeof(buffer), "0x%" PRIX64, imm64);
     snprintf(buffer, sizeof(buffer), INTPTR_FORMAT, imm64);
     block_comment(buffer);
   }
